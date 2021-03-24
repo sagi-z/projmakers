@@ -1,6 +1,6 @@
 # Projmakers
 
-Auto create makeprg commands per project.
+Vim - auto create makeprg commands per project.
   
 ## Description
 
