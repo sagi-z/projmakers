@@ -94,10 +94,10 @@ Other projects can have a different *:compiler* and *makeprgs* associated
 with the same command.
 
 Now when a buffer is loaded and a *.projections.json* file is loaded for it, a
-new **:ProjTestSuite** command will be defined in this buffer to use the compiler
-and makeprg and invoke *:Make* if [dispatch] is installed or *:make* otherwise.
-(of course **:ProjTestMockedClient** and **:ProjTestMockedServer** commands are
-created the same way as defined in the json file).
+new **:ProjTestSuite** command will be defined in this buffer to use the
+compiler and makeprg and invoke *:Make* if [dispatch] is installed or *:make*
+otherwise (of course **:ProjTestMockedClient** and **:ProjTestMockedServer**
+commands are created the same way as defined in the json file).
 
 If you supply options on the vim command line then they replace the *args* in
 the json file.
