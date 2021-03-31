@@ -45,18 +45,18 @@ augroup end
 let s:projmakers_task_prefix = '.makeprgs.'
 let s:task_prefix_len = len(s:projmakers_task_prefix)
 
-function! s:OptsInterceptor(opts)
+function! s:AsyncOptsInterceptor(opts)
     let is_caching = get(b:, 'projmakers_is_caching', 0)
     if is_caching
         let b:projmakers_async_tasks = get(b:, 'projmakers_async_tasks', {})
         let b:projmakers_async_tasks[a:opts.name] = deepcopy(a:opts)
-        throw "OptsInterceptor"
+        throw "AsyncOptsInterceptor"
     else
         return b:projmakers_async_tasks[a:opts.name].makeprg
     endif
 endfunction
 let g:asyncrun_program = get(g:, 'asyncrun_program', {})
-let g:asyncrun_program.makeprgs = funcref("s:OptsInterceptor")
+let g:asyncrun_program.makeprgs = funcref("s:AsyncOptsInterceptor")
 
 
 function! s:AsyncTaskRunner(opts) abort
@@ -74,7 +74,7 @@ function! s:RefreshFromAsyncTasks() abort
             if l:task.name[:s:task_prefix_len - 1] == s:projmakers_task_prefix
                 try
                     exe "AsyncTask " . l:task.name
-                catch /^OptsInterceptor$/
+                catch /^AsyncOptsInterceptor$/
                     continue
                 endtry
             endif
