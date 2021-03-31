@@ -1,5 +1,5 @@
 " Vim plugin which works with vim projectionist/asynctasks to simplify makeprgs in projects
-" Last Change:	2021 March 30
+" Last Change:	2021 March 31
 " Maintainer:	Sagi Zeevi <sagi.zeevi@gmail.com>
 " License:      MIT
 
@@ -46,20 +46,21 @@ let s:projmakers_task_prefix = '.makeprgs.'
 let s:task_prefix_len = len(s:projmakers_task_prefix)
 
 function! s:AsyncOptsInterceptor(opts)
-    let is_caching = get(b:, 'projmakers_is_caching', 0)
-    if is_caching
+    let l:is_caching = get(b:, 'projmakers_is_caching', 0)
+    if l:is_caching
         let b:projmakers_async_tasks = get(b:, 'projmakers_async_tasks', {})
         let b:projmakers_async_tasks[a:opts.name] = deepcopy(a:opts)
         throw "AsyncOptsInterceptor"
     else
-        return b:projmakers_async_tasks[a:opts.name].makeprg
+        let l:cmd = projmakers#shift_all(a:opts.cmd)[0] . " " . projmakers#args(a:opts.name)
+        return l:cmd
     endif
 endfunction
 let g:asyncrun_program = get(g:, 'asyncrun_program', {})
 let g:asyncrun_program.makeprgs = funcref("s:AsyncOptsInterceptor")
 
 
-function! s:AsyncTaskRunner(opts) abort
+function! s:AsyncTaskRunner(opts, args) abort
     exe "AsyncTask " . a:opts.orig_name
 endfunction
 

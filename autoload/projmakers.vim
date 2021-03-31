@@ -39,13 +39,27 @@ endfunction
 function! projmakers#shift_all(str)
     let l:opts = {}
     let l:str = a:str
-    while True
+    while 1
         let [l:str, l:opt_key, l:opt_val] = projmakers#shift(l:str, '\w\+')
         if ! empty(l:opt_key)
             let l:opts[l:opt_key] = l:opt_val
         else
             return [l:str, l:opts]
         endif
+    endwhile
+endfunction
+
+
+" PUBLIC: you can use this to expand this plugin
+" Description:
+"   Returns the args given on the vim command prompt, or configured defaults if none where given
+" Params:
+"   cmd (string): the name of the vim command
+" Returns:
+"   string - the args given on the vim command prompt, or configured defaults if none where given
+function! projmakers#args(cmd) abort
+    let l:projmakers_args = get(b:, "projmakers_args", "")
+    return l:projmakers_args
 endfunction
 
 
@@ -84,6 +98,7 @@ function! projmakers#new_command(opts) abort
     if has_key(a:opts, "args")
         let l:defaults = '"' . a:opts.args . '"'
     else
+        let a:opts.args = ""
         let l:defaults = '""'
     endif
     let l:complete = ""
@@ -159,6 +174,8 @@ endfunction
 " 'errorformat' when it starts and use it later on. Here we'll set
 " it before invoking ':Make' and revert it back immediately.
 function! projmakers#_make(name, args) abort
+    let l:win_id = win_getid()
+    let b:projmakers_args = a:args
     let l:efm = &l:efm
     let l:makeprg = &l:makeprg
     let l:compiler = get(b:, 'current_compiler', '')
@@ -176,7 +193,7 @@ function! projmakers#_make(name, args) abort
         let &l:makeprg = opts.makeprg
         if has_key(opts, "projmakers_runner") && ! get(g:, 'projmakers#force_make_runner', 0)
             let l:Runner = opts.projmakers_runner
-            call l:Runner(opts)
+            call l:Runner(opts, a:args)
         else
             if exists(":Make")
                 let l:maker = 'Make'
@@ -186,11 +203,13 @@ function! projmakers#_make(name, args) abort
             exe ":" . l:maker . ' ' . a:args
         endif
     finally
+        call win_gotoid(l:win_id)
         if ! empty(l:compiler)
             exe ":compiler " . l:compiler
         endif
         let &l:efm = l:efm
         let &l:makeprg = l:makeprg
+        unlet b:projmakers_args
     endtry
 endfunction
 
