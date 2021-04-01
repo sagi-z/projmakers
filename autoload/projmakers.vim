@@ -157,6 +157,9 @@ function! s:CleanupBuffer() abort
     if exists("b:projmakers_complete")
         unlet b:projmakers_complete
     endif
+    if exists("b:projmakers_args")
+        unlet b:projmakers_args
+    endif
 endfunction
 
 
@@ -238,13 +241,13 @@ function! projmakers#_make(name, args) abort
             exe ":" . l:maker . ' ' . l:args
         endif
     finally
-        call win_gotoid(l:win_id)
-        if ! empty(l:compiler)
-            exe ":compiler " . l:compiler
+        if win_gotoid(l:win_id)
+            if ! empty(l:compiler)
+                exe ":compiler " . l:compiler
+            endif
+            let &l:efm = l:efm
+            let &l:makeprg = l:makeprg
         endif
-        let &l:efm = l:efm
-        let &l:makeprg = l:makeprg
-        unlet b:projmakers_args
     endtry
 endfunction
 

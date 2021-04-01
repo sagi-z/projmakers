@@ -56,10 +56,10 @@ function! s:AsyncOptsInterceptor(opts)
                     \"' is either wrongly named or should not use program 'makeprgs'")
         return a:opts.cmd
     endif
-    let [l:cmd, l:opts] = projmakers#eval_orig_cmd(a:opts.cmd, s:BufferedCommandName(a:opts.name))
-    if has_key(l:opts, "program")
+    let [l:cmd, l:inline_opts] = projmakers#eval_orig_cmd(a:opts.cmd, s:BufferedCommandName(a:opts.name))
+    if has_key(l:inline_opts, "program")
         let a:opts.cmd = l:cmd
-        let l:F = l:opts.program
+        let l:F = l:inline_opts.program
         if type(l:F) == v:t_string
             let l:F = function(l:F)
         endif
