@@ -45,19 +45,63 @@ augroup end
 let s:projmakers_task_prefix = '.makeprgs.'
 let s:task_prefix_len = len(s:projmakers_task_prefix)
 
+" This program implementation can be invoked in 2 situations:
+" 1. When executing for a command it will update itself with configured defaults and optionally
+"    delegate to another program.
+" 2. When updating the makeprg when :Make is used, do the same as 2 above, but throw an exception
+"    to return the new command.
 function! s:AsyncOptsInterceptor(opts)
-    let l:is_caching = get(b:, 'projmakers_is_caching', 0)
-    if l:is_caching
-        let b:projmakers_async_tasks = get(b:, 'projmakers_async_tasks', {})
-        let b:projmakers_async_tasks[a:opts.name] = deepcopy(a:opts)
-        throw "AsyncOptsInterceptor"
-    else
-        let l:cmd = projmakers#shift_all(a:opts.cmd)[0] . " " . projmakers#args(a:opts.name)
-        return l:cmd
+    if ! s:IsBufferedCommandName(a:opts.name)
+        call projmakers#warn("asynctask '". a:opts.name.
+                    \"' is either wrongly named or should not use program 'makeprgs'")
+        return a:opts.cmd
     endif
+    let [l:cmd, l:opts] = projmakers#eval_orig_cmd(a:opts.cmd, s:BufferedCommandName(a:opts.name))
+    if has_key(l:opts, "program")
+        let a:opts.cmd = l:cmd
+        let l:F = l:opts.program
+        if type(l:F) == v:t_string
+            let l:F = function(l:F)
+        endif
+        let l:cmd = l:F(a:opts)
+    endif
+    let l:is_updating = get(b:, 'projmakers_is_updating', 0)
+    if l:is_updating
+        let b:projmakers_updated_makeprg = l:cmd
+        throw "AsyncOptsInterceptor"
+    endif
+    return l:cmd
 endfunction
 let g:asyncrun_program = get(g:, 'asyncrun_program', {})
 let g:asyncrun_program.makeprgs = funcref("s:AsyncOptsInterceptor")
+
+
+function! s:IsBufferedCommandName(orig_name) abort
+    return a:orig_name[:s:task_prefix_len - 1] == s:projmakers_task_prefix
+endfunction
+
+
+function! s:BufferedCommandName(orig_name) abort
+    if s:IsBufferedCommandName(a:orig_name)
+        return a:orig_name[s:task_prefix_len:]
+    endif
+    return ""
+endfunction
+
+
+function! s:AsyncTaskCmdUpdater(opts, args) abort
+    try
+        let b:projmakers_updated_makeprg = a:opts.makeprg
+        let b:projmakers_is_updating = 1
+        try
+            exe "AsyncTask " . a:opts.orig_name
+        catch /^AsyncOptsInterceptor$/
+        endtry
+    finally
+        let b:projmakers_is_updating = 0
+    endtry
+    return b:projmakers_updated_makeprg
+endfunction
 
 
 function! s:AsyncTaskRunner(opts, args) abort
@@ -66,45 +110,33 @@ endfunction
 
 
 function! s:RefreshFromAsyncTasks() abort
-    if exists("b:projmakers_async_tasks")
+    if exists("b:projmakers_async_tasks_loaded")
         return
     endif
-    try
-        let b:projmakers_is_caching = 1
-        for l:task in asynctasks#list('')
-            if l:task.name[:s:task_prefix_len - 1] == s:projmakers_task_prefix
-                try
-                    exe "AsyncTask " . l:task.name
-                catch /^AsyncOptsInterceptor$/
-                    continue
-                endtry
-            endif
-        endfor
-    finally
-        let b:projmakers_is_caching = 0
-    endtry
-    if exists("b:projmakers_async_tasks")
-        for [l:name, l:opts] in items(b:projmakers_async_tasks)
-            let l:opts.projmakers_runner = function("s:AsyncTaskRunner")
-            let l:opts.orig_name = l:name
-            let l:opts.name = l:name[s:task_prefix_len:]
-            let l:opts.makeprg = l:opts.cmd
-            if stridx(l:opts.errorformat, '\s\+') == -1
-                let l:opts.compiler = l:opts.errorformat
-                let l:opts.errorformat = ''
-            endif
-            call projmakers#new_command(l:opts)
-        endfor
-    endif
+    let b:projmakers_async_tasks_loaded = 1
+    for l:task in asynctasks#list('')
+        if s:IsBufferedCommandName(l:task.name)
+            let l:opts = {}
+            let l:opts.orig_name = l:task.name
+            let l:opts.name = s:BufferedCommandName(l:task.name)
+            let l:opts.makeprg = l:task.command
+            call projmakers#new_command(l:opts,
+                        \ function("s:AsyncTaskRunner"),
+                        \ function("s:AsyncTaskCmdUpdater"))
+        endif
+    endfor
 endfunction
 
 
 function! s:AsyncTasksCleanup() abort
-    if exists("b:projmakers_async_tasks")
-        unlet b:projmakers_async_tasks
+    if exists("b:projmakers_async_tasks_loaded")
+        unlet b:projmakers_async_tasks_loaded
     endif
-    if exists("b:projmakers_is_caching")
-        unlet b:projmakers_is_caching
+    if exists("b:projmakers_is_updating")
+        unlet b:projmakers_is_updating
+    endif
+    if exists("b:projmakers_updated_makeprg")
+        unlet b:projmakers_updated_makeprg
     endif
 endfunction
 
