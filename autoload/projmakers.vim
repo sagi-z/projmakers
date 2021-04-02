@@ -135,16 +135,10 @@ function! projmakers#new_command(opts, runner=v:none, makeprg_updater=v:none) ab
 endfunction
 
 
-function! s:OverrideOpt(str, opt, opts, key) abort
-    let [l:ret, l:item_key, l:item_val] = projmakers#shift(a:str, a:opt)
-    if ! has_key(a:opts, a:key) && ! empty(l:item_val)
-        let a:opts[a:key] = l:item_val
-    endif
-    return l:ret
-endfunction
-
-
-function! s:CleanupBuffer() abort
+" PUBLIC: you can use this to expand this plugin
+" Description:
+"   Remove projmakers' buffer variables for the current buffer.
+function! projmakers#cleanup() abort
     if exists("b:projmakers_opts")
         for l:cmd in keys(b:projmakers_opts)
             try
@@ -161,6 +155,16 @@ function! s:CleanupBuffer() abort
         unlet b:projmakers_args
     endif
 endfunction
+
+
+function! s:OverrideOpt(str, opt, opts, key) abort
+    let [l:ret, l:item_key, l:item_val] = projmakers#shift(a:str, a:opt)
+    if ! has_key(a:opts, a:key) && ! empty(l:item_val)
+        let a:opts[a:key] = l:item_val
+    endif
+    return l:ret
+endfunction
+
 
 
 " PRIVATE: this can change without a warning
@@ -207,6 +211,7 @@ endfunction
 function! projmakers#_make(name, args) abort
     let l:win_id = win_getid()
     let b:projmakers_args = a:args
+    let l:cwd = getcwd()
     let l:efm = &l:efm
     let l:makeprg = &l:makeprg
     let l:compiler = get(b:, 'current_compiler', '')
@@ -247,6 +252,18 @@ function! projmakers#_make(name, args) abort
             endif
             let &l:efm = l:efm
             let &l:makeprg = l:makeprg
+            if getcwd() != l:cwd
+                if haslocaldir() == 1
+                    " window local directory case
+                    exe "lcd " . l:cwd
+                elseif haslocaldir() == 2
+                    " tab-local directory case
+                    exe "tcd " . l:cwd
+                else
+                    " global directory case
+                    exe "cd " . l:cwd
+                endif
+            endif
         endif
     endtry
 endfunction
@@ -267,8 +284,3 @@ endfunction
 function! s:WS2CR(str) abort
     return substitute(a:str, "\\s\\+", "\n", "g")
 endfunction
-
-
-augroup projmakers
-    autocmd BufUnload * call s:CleanupBuffer()
-augroup end

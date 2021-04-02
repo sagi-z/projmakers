@@ -110,9 +110,7 @@ endfunction
 
 
 function! s:RefreshFromAsyncTasks() abort
-    if exists("b:projmakers_async_tasks_loaded")
-        return
-    endif
+    call s:AsyncTasksCleanup()
     let b:projmakers_async_tasks_loaded = 1
     for l:task in asynctasks#list('')
         if s:IsBufferedCommandName(l:task.name)
@@ -138,12 +136,12 @@ function! s:AsyncTasksCleanup() abort
     if exists("b:projmakers_updated_makeprg")
         unlet b:projmakers_updated_makeprg
     endif
+    call projmakers#cleanup()
 endfunction
 
 
 augroup projmakers
-    autocmd BufEnter * call s:RefreshFromAsyncTasks()
-    autocmd BufUnload * call s:AsyncTasksCleanup()
+    autocmd FileType * call s:RefreshFromAsyncTasks()
 augroup end
 "
 """
