@@ -246,6 +246,7 @@ function! projmakers#_make(name, args) abort
             exe ":" . l:maker . ' ' . l:args
         endif
     finally
+        let l:win_id_new = win_getid()
         if win_gotoid(l:win_id)
             if ! empty(l:compiler)
                 exe ":compiler " . l:compiler
@@ -263,6 +264,10 @@ function! projmakers#_make(name, args) abort
                     " global directory case
                     exe "cd " . l:cwd
                 endif
+            endif
+            if l:win_id_new != l:win_id
+                " The makeprg runner engine wants to be in another window
+                call win_gotoid(l:win_id_new)
             endif
         endif
     endtry
