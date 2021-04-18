@@ -113,15 +113,12 @@ endfunction
 
 
 function! s:RefreshFromAsyncTasks() abort
-    echom "RefreshFromAsyncTasks"
     if ! exists("*asynctasks#list")
         return
     endif
     call s:AsyncTasksCleanup()
     let b:projmakers_async_tasks_loaded = 1
-    echom "RefreshFromAsyncTasks collecting tasks"
     for l:task in asynctasks#list('')
-        echom "RefreshFromAsyncTasks checking " . l:task.name
         if s:IsBufferedCommandName(l:task.name)
             let l:opts = {}
             let l:opts.orig_name = l:task.name
