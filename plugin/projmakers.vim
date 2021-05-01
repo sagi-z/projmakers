@@ -1,5 +1,5 @@
 " Vim plugin which works with vim projectionist/asynctasks to simplify makeprgs in projects
-" Last Change:	2021 March 31
+" Last Change:	2021 May 01
 " Maintainer:	Sagi Zeevi <sagi.zeevi@gmail.com>
 " License:      MIT
 

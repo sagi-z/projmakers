@@ -1,4 +1,5 @@
 
+let s:vnone = ''
 
 " PUBLIC: you can use this to expand this plugin
 " Description:
@@ -92,17 +93,25 @@ endfunction
 "         * compiler            (deprecated - same as <compiler: ...> above))
 "         * errorformat         (you really should use compiler instead)
 "         * projmakers_runner   (a function reference which get the a:opts and executes the command)
-"   runner(function) : Optionally supply a function which gets (opts,args) to run the command instead of :Make/:make
-"   makeprg_updater(function) : Optionally supply a function which gets (opts,args) and updates the makeprg before :Make/:make
-function! projmakers#new_command(opts, runner=v:none, makeprg_updater=v:none) abort
+"   Runner(function) : Optionally supply a function which gets (opts,args) to run the command instead of :Make/:make
+"   MakeprgUpdater(function) : Optionally supply a function which gets (opts,args) and updates the makeprg before :Make/:make
+function! projmakers#new_command(opts, ...) abort
+    let Runner = s:vnone
+	if a:0 >= 1
+		let Runner = a:1
+	endif
+    let MakeprgUpdater = s:vnone
+	if a:0 >= 2
+		let MakeprgUpdater = a:2
+	endif
     if ! has_key(a:opts, "makeprg")
         return projmakers#warn("Got opts without a makeprg for " . string(a:opts))
     endif
     if ! has_key(a:opts, "name")
         return projmakers#warn("Got opts without a name: " . string(a:opts))
     endif
-    let a:opts.projmakers_runner = a:runner
-    let a:opts.projmakers_updater = a:makeprg_updater
+    let a:opts.projmakers_runner = Runner
+    let a:opts.projmakers_updater = MakeprgUpdater
     let a:opts.makeprg = s:OverrideOpt(a:opts.makeprg, "default", a:opts, "args")
     let a:opts.makeprg = s:OverrideOpt(a:opts.makeprg, "vim_cmd_args", a:opts, "vim_cmd_args")
     let a:opts.makeprg = s:OverrideOpt(a:opts.makeprg, "complete", a:opts, "complete")
@@ -175,10 +184,14 @@ endfunction
 "   default (string): optional default arguments if this is invoked from another buffer
 " Returns:
 "   string - the args given on the vim command prompt, or configured default if none where given
-function! projmakers#_buffered_args(name, default="") abort
+function! projmakers#_buffered_args(name, ...) abort
+    let default = ""
+	if a:0 >= 1
+		let default = a:1
+	endif
     let l:projmakers_args = get(b:, "projmakers_args", "")
     let l:projmakers_opts = get(b:, "projmakers_opts", {})
-    let l:default = get(get(l:projmakers_opts, a:name, {}), "args", a:default)
+    let l:default = get(get(l:projmakers_opts, a:name, {}), "args", default)
     return projmakers#_args(l:projmakers_args, l:default)
 endfunction
 
@@ -223,7 +236,7 @@ function! projmakers#_make(name, args) abort
         if has_key(l:opts, "compiler")
             exe ":compiler " . l:opts.compiler
         endif
-        if l:opts.projmakers_runner isnot v:none && ! get(g:, 'projmakers#force_make_runner', 0)
+        if l:opts.projmakers_runner isnot s:vnone && ! get(g:, 'projmakers#force_make_runner', 0)
             let l:Runner = l:opts.projmakers_runner
             call l:Runner(l:opts, a:args)
         else
@@ -231,7 +244,7 @@ function! projmakers#_make(name, args) abort
                 return projmakers#warn("Got opts without a makeprg for " . a:name)
             endif
             let &l:makeprg = l:opts.makeprg
-            if l:opts.projmakers_updater isnot v:none
+            if l:opts.projmakers_updater isnot s:vnone
                 let l:Updater = l:opts.projmakers_updater
                 let &l:makeprg = l:Updater(l:opts, a:args)
                 let l:args = ""
